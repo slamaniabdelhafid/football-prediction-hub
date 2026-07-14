@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --bg: #0b1220;
+  --surface: #121b2e;
+  --surface-2: #1a2740;
+  --turf: #1fae6b;
+  --amber: #f5a623;
+  --red: #e5484d;
+  --line: #24304a;
+  --text: #edf1f7;
+  --text-dim: #8b97ac;
+  --gold: #e8c468;
+  --gold-deep: #b8934a;
+}
+
+.light {
+  --bg: #f6f7fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --line: #dce1ea;
+  --text: #101826;
+  --text-dim: #5b6576;
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* Prediction bar fill animation */
+@keyframes fillBar {
+  from { width: 0%; }
+}
+.pred-bar-segment {
+  animation: fillBar 700ms ease-out;
+}
+
+/* Live status pulse */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot {
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+
+/* Focus visibility (accessibility) */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--turf);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pred-bar-segment,
+  .live-dot {
+    animation: none !important;
+  }
+}
