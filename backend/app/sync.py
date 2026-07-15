@@ -19,8 +19,12 @@ admin.py, which both catch that and log it clearly rather than crash.
 
 Rate limit: 10 requests/minute on the free tier. Two calls per mapped league
 (standings + matches) -> ~18 calls for all 9 leagues, spaced out below to
-stay under the limit rather than trying to burst and hit 429s.
+stay under the limit rather than trying to burst and hit 429s. A module-level
+lock (SYNC_LOCK below) also prevents two syncs running at once — e.g. the
+startup sync and a manual admin trigger overlapping — which would double the
+request rate and blow through the limit even with the spacing in place.
 """
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -31,7 +35,8 @@ from .providers.football_data import (
     FootballDataClient, LEAGUE_ID_TO_FD_CODE, fd_status_to_ours, parse_fd_datetime,
 )
 
-REQUEST_DELAY_SECONDS = 6.5  # keeps us under 10 req/min with margin
+REQUEST_DELAY_SECONDS = 7.0  # keeps us under 10 req/min with margin
+SYNC_LOCK = threading.Lock()
 
 
 def _team_id(league_id: str, name: str) -> str:
@@ -170,32 +175,47 @@ def run_sync(only_league_ids: list[str] | None = None) -> dict:
     logged; leagues that already synced keep their data, unsynced ones stay
     on mock data. Raises immediately (uncaught) only if FOOTBALL_DATA_API_KEY
     is missing entirely — callers (admin.py, main.py) catch that.
-    """
-    targets = {
-        lid: code for lid, code in LEAGUE_ID_TO_FD_CODE.items()
-        if only_league_ids is None or lid in only_league_ids
-    }
 
-    client = FootballDataClient()  # raises RuntimeError here if no API key set
-    synced, failed, matches_written = [], [], 0
+    If a sync is already running (e.g. the startup job hasn't finished and
+    someone hits "Trigger Manual Sync"), this returns immediately instead of
+    running a second overlapping sync — two at once would double the request
+    rate and blow through the 10/min free-tier limit.
+    """
+    if not SYNC_LOCK.acquire(blocking=False):
+        return {
+            "synced_leagues": [], "failed_leagues": [],
+            "matches_synced": 0, "timestamp": datetime.now(timezone.utc).isoformat(),
+            "skipped": "A sync is already in progress — wait for it to finish before retrying.",
+        }
 
     try:
-        for league_id, code in targets.items():
-            try:
-                stats = _sync_standings_for_league(client, league_id, code)
-                if not stats:
-                    failed.append({"league_id": league_id, "error": "No standings data returned"})
-                    continue
-                matches_written += _sync_matches_for_league(client, league_id, code, stats)
-                synced.append(league_id)
-            except Exception as e:
-                failed.append({"league_id": league_id, "error": str(e)})
-    finally:
-        client.close()
+        targets = {
+            lid: code for lid, code in LEAGUE_ID_TO_FD_CODE.items()
+            if only_league_ids is None or lid in only_league_ids
+        }
 
-    return {
-        "synced_leagues": synced,
-        "failed_leagues": failed,
-        "matches_synced": matches_written,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+        client = FootballDataClient()  # raises RuntimeError here if no API key set
+        synced, failed, matches_written = [], [], 0
+
+        try:
+            for league_id, code in targets.items():
+                try:
+                    stats = _sync_standings_for_league(client, league_id, code)
+                    if not stats:
+                        failed.append({"league_id": league_id, "error": "No standings data returned"})
+                        continue
+                    matches_written += _sync_matches_for_league(client, league_id, code, stats)
+                    synced.append(league_id)
+                except Exception as e:
+                    failed.append({"league_id": league_id, "error": str(e)})
+        finally:
+            client.close()
+
+        return {
+            "synced_leagues": synced,
+            "failed_leagues": failed,
+            "matches_synced": matches_written,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    finally:
+        SYNC_LOCK.release()

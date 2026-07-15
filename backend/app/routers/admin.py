@@ -16,13 +16,14 @@ _state = {
 
 @router.get("/stats")
 def dashboard_stats():
+    any_live = any(league.data_source == "live" for league in md.LEAGUES.values())
     return {
         "total_leagues": len(md.LEAGUES),
         "total_teams": len(md.TEAMS),
         "total_matches": len(md.MATCHES),
         "matches_today": len([m for m in md.MATCHES.values()
                                if m.kickoff.date() == datetime.now(timezone.utc).date()]),
-        "api_status": "mock-data-mode",
+        "api_status": "live-data-mode" if any_live else "mock-data-mode",
         "last_sync": _state["last_sync"],
     }
 
@@ -64,14 +65,18 @@ def trigger_sync():
         from .. import sync as sync_module
         try:
             result = sync_module.run_sync()
-            detail = (
-                f"Synced {len(result['synced_leagues'])} leagues, "
-                f"{result['matches_synced']} matches, from football-data.org"
-            )
-            if result["failed_leagues"]:
-                reasons = "; ".join(f"{f['league_id']}: {f['error']}" for f in result["failed_leagues"])
-                detail += f" — FAILED: {reasons}"
-            status = "ok" if not result["failed_leagues"] else "partial"
+            if result.get("skipped"):
+                detail = result["skipped"]
+                status = "partial"
+            else:
+                detail = (
+                    f"Synced {len(result['synced_leagues'])} leagues, "
+                    f"{result['matches_synced']} matches, from football-data.org"
+                )
+                if result["failed_leagues"]:
+                    reasons = "; ".join(f"{f['league_id']}: {f['error']}" for f in result["failed_leagues"])
+                    detail += f" — FAILED: {reasons}"
+                status = "ok" if not result["failed_leagues"] else "partial"
         except Exception as e:
             detail = f"Live sync failed: {e}"
             status = "error"
