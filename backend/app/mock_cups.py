@@ -102,8 +102,8 @@ def _build_knockout() -> list[KnockoutMatch]:
     qf = [
         ("France", "Morocco", 2, 0, None, "finished", _dt(2026, 7, 9, 20, 0), "Gillette Stadium, Boston"),
         ("Spain", "Belgium", 2, 1, None, "finished", _dt(2026, 7, 10, 19, 0), "SoFi Stadium, Inglewood"),
-        ("Norway", "England", None, None, None, "scheduled", _dt(2026, 7, 11, 21, 0), "Hard Rock Stadium, Miami"),
-        ("Argentina", "Switzerland", None, None, None, "scheduled", _dt(2026, 7, 12, 1, 0), "Arrowhead Stadium, Kansas City"),
+        ("Norway", "England", 1, 2, None, "finished", _dt(2026, 7, 11, 21, 0), "Hard Rock Stadium, Miami"),
+        ("Argentina", "Switzerland", 3, 1, None, "finished", _dt(2026, 7, 12, 1, 0), "Arrowhead Stadium, Kansas City"),
     ]
     for i, (home, away, hs, as_, pens, kind, kickoff, venue) in enumerate(qf, start=1):
         pred = _knockout_prediction(home, away) if kind == "scheduled" else None
@@ -115,31 +115,31 @@ def _build_knockout() -> list[KnockoutMatch]:
             prediction=pred, slot=i,
         ))
 
-    # Semifinal 1 is fully determined; Semifinal 2 waits on today's quarterfinals.
+    # Both semifinals are complete.
     matches.append(KnockoutMatch(
         id=f"{CUP_ID}__sf__1", round="Semifinal", home_team="France", away_team="Spain",
         kickoff=_dt(2026, 7, 14, 19, 0), venue="AT&T Stadium, Dallas",
-        status=MatchStatus(kind="scheduled"),
-        prediction=_knockout_prediction("France", "Spain"), slot=1,
+        status=MatchStatus(kind="finished", home_score=0, away_score=2), slot=1,
     ))
     matches.append(KnockoutMatch(
-        id=f"{CUP_ID}__sf__2", round="Semifinal",
-        home_placeholder="Winner: Norway vs England", away_placeholder="Winner: Argentina vs Switzerland",
+        id=f"{CUP_ID}__sf__2", round="Semifinal", home_team="England", away_team="Argentina",
         kickoff=_dt(2026, 7, 15, 19, 0), venue="Mercedes-Benz Stadium, Atlanta",
-        status=MatchStatus(kind="scheduled"), slot=2,
+        status=MatchStatus(kind="finished", home_score=1, away_score=2), slot=2,
     ))
 
     matches.append(KnockoutMatch(
         id=f"{CUP_ID}__3rd__1", round="Third Place",
-        home_placeholder="SF1 Loser", away_placeholder="SF2 Loser",
+        home_team="France", away_team="England",
         kickoff=_dt(2026, 7, 18, 21, 0), venue="Hard Rock Stadium, Miami",
-        status=MatchStatus(kind="scheduled"), slot=1,
+        status=MatchStatus(kind="scheduled"),
+        prediction=_knockout_prediction("France", "England"), slot=1,
     ))
     matches.append(KnockoutMatch(
         id=f"{CUP_ID}__final__1", round="Final",
-        home_placeholder="SF1 Winner", away_placeholder="SF2 Winner",
+        home_team="Spain", away_team="Argentina",
         kickoff=_dt(2026, 7, 19, 19, 0), venue="MetLife Stadium, New Jersey",
-        status=MatchStatus(kind="scheduled"), slot=1,
+        status=MatchStatus(kind="scheduled"),
+        prediction=_knockout_prediction("Spain", "Argentina"), slot=1,
     ))
 
     return matches
@@ -150,7 +150,7 @@ def get_world_cup_2026() -> CupDetail:
         id=CUP_ID, name="FIFA World Cup 2026", season="2026",
         host="United States, Mexico & Canada",
         data_source="simulated",
-        snapshot_note="Real results as of July 11, 2026 — see docs/API_INTEGRATION.md to keep this live",
+        snapshot_note="Real results as of July 15, 2026 (both semifinals complete) — see docs/API_INTEGRATION.md to keep this live",
     )
     return CupDetail(cup=cup, groups=_build_groups(), knockout=_build_knockout())
 
