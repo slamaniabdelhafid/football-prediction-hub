@@ -27,9 +27,13 @@ LEAGUE_ID_TO_FD_CODE = {
     "eredivisie": "DED",
     "primeira-liga": "PPL",
     "brasileirao": "BSA",
-    # CL (Champions League), EC (Euros), WC (World Cup) are cup competitions,
-    # not leagues with standings tables in our sense — left out of the mapping
-    # on purpose; add a "cup" league type in a future stage if you want them.
+    # Since UEFA's 2024/25 reformat, the Champions League league phase has a
+    # real single-table standings, which football-data.org exposes the same
+    # way as a domestic league — fits the existing standings-based sync path.
+    "champions-league": "CL",
+    # EC (Euros) and WC (World Cup) are knockout/group tournaments without a
+    # standings table in this sense, and are handled separately by the Cups
+    # feature (app/mock_cups.py) instead of this league-sync path.
 }
 
 

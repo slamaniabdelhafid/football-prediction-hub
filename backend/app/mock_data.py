@@ -23,25 +23,10 @@ COUNTRIES = {
     "italy":    Country(name="Italy", code="IT", flag_emoji="\U0001F1EE\U0001F1F9"),
     "germany":  Country(name="Germany", code="DE", flag_emoji="\U0001F1E9\U0001F1EA"),
     "france":   Country(name="France", code="FR", flag_emoji="\U0001F1EB\U0001F1F7"),
-    "saudi":    Country(name="Saudi Arabia", code="SA", flag_emoji="\U0001F1F8\U0001F1E6"),
-    "russia":   Country(name="Russia", code="RU", flag_emoji="\U0001F1F7\U0001F1FA"),
     "netherlands": Country(name="Netherlands", code="NL", flag_emoji="\U0001F1F3\U0001F1F1"),
-    "belgium":  Country(name="Belgium", code="BE", flag_emoji="\U0001F1E7\U0001F1EA"),
     "portugal": Country(name="Portugal", code="PT", flag_emoji="\U0001F1F5\U0001F1F9"),
-    "turkey":   Country(name="Turkey", code="TR", flag_emoji="\U0001F1F9\U0001F1F7"),
-    "usa":      Country(name="USA", code="US", flag_emoji="\U0001F1FA\U0001F1F8"),
     "brazil":   Country(name="Brazil", code="BR", flag_emoji="\U0001F1E7\U0001F1F7"),
-    "argentina": Country(name="Argentina", code="AR", flag_emoji="\U0001F1E6\U0001F1F7"),
-    "egypt":    Country(name="Egypt", code="EG", flag_emoji="\U0001F1EA\U0001F1EC"),
-    "morocco":  Country(name="Morocco", code="MA", flag_emoji="\U0001F1F2\U0001F1E6"),
-    "algeria":  Country(name="Algeria", code="DZ", flag_emoji="\U0001F1E9\U0001F1FF"),
-    "tunisia":  Country(name="Tunisia", code="TN", flag_emoji="\U0001F1F9\U0001F1F3"),
-    "qatar":    Country(name="Qatar", code="QA", flag_emoji="\U0001F1F6\U0001F1E6"),
-    "uae":      Country(name="UAE", code="AE", flag_emoji="\U0001F1E6\U0001F1EA"),
-    "japan":    Country(name="Japan", code="JP", flag_emoji="\U0001F1EF\U0001F1F5"),
-    "skorea":   Country(name="South Korea", code="KR", flag_emoji="\U0001F1F0\U0001F1F7"),
-    "china":    Country(name="China", code="CN", flag_emoji="\U0001F1E8\U0001F1F3"),
-    "india":    Country(name="India", code="IN", flag_emoji="\U0001F1EE\U0001F1F3"),
+    "europe":   Country(name="Europe", code="EU", flag_emoji="\U0001F1EA\U0001F1FA"),
 }
 
 # ---------------------------------------------------------------------------
@@ -61,82 +46,41 @@ LEAGUE_DEFS = [
         "Osasuna", "Celta Vigo", "Getafe", "Mallorca", "Rayo Vallecano",
         "Las Palmas", "Alaves", "Cadiz", "Granada", "Almeria",
     ]),
-    ("segunda", "Segunda Division", "SEG", "spain", 2, False, None),
     ("serie-a", "Serie A", "SA", "italy", 1, True, [
         "Inter Milan", "AC Milan", "Juventus", "Napoli", "AS Roma",
         "Lazio", "Atalanta", "Fiorentina", "Bologna", "Torino",
         "Monza", "Genoa", "Lecce", "Sassuolo", "Udinese",
         "Cagliari", "Verona", "Empoli", "Frosinone", "Salernitana",
     ]),
-    ("serie-b", "Serie B", "SB", "italy", 2, False, None),
     ("bundesliga", "Bundesliga", "BL1", "germany", 1, True, [
         "Bayern Munich", "Bayer Leverkusen", "RB Leipzig", "Borussia Dortmund", "Union Berlin",
         "Freiburg", "Eintracht Frankfurt", "Wolfsburg", "Mainz 05", "Borussia Monchengladbach",
         "Koln", "Hoffenheim", "Werder Bremen", "Bochum", "Augsburg",
         "Stuttgart", "Heidenheim", "Darmstadt",
     ]),
-    ("bundesliga-2", "Bundesliga 2", "BL2", "germany", 2, False, None),
     ("ligue-1", "Ligue 1", "L1", "france", 1, True, [
         "Paris Saint-Germain", "Monaco", "Marseille", "Lille", "Lyon",
         "Lens", "Rennes", "Nice", "Reims", "Toulouse",
         "Montpellier", "Strasbourg", "Nantes", "Le Havre", "Metz",
         "Clermont", "Lorient", "Brest",
     ]),
-    ("saudi-pro-league", "Saudi Pro League", "SPL", "saudi", 1, True, [
-        "Al Hilal", "Al Nassr", "Al Ittihad", "Al Ahli", "Al Shabab",
-        "Al Ettifaq", "Al Taawoun", "Al Fateh", "Damac", "Al Fayha",
-    ]),
-    ("russian-premier-league", "Russian Premier League", "RPL", "russia", 1, True, None),
     ("eredivisie", "Eredivisie", "ERE", "netherlands", 1, True, [
         "Ajax", "PSV Eindhoven", "Feyenoord", "AZ Alkmaar", "FC Twente",
         "FC Utrecht", "Sparta Rotterdam", "NEC Nijmegen",
     ]),
-    ("jupiler-pro-league", "Jupiler Pro League", "JPL", "belgium", 1, True, None),
     ("primeira-liga", "Primeira Liga", "PT1", "portugal", 1, True, [
         "Benfica", "Porto", "Sporting CP", "Braga", "Vitoria Guimaraes",
-    ]),
-    ("super-lig", "Super Lig", "TR1", "turkey", 1, True, [
-        "Galatasaray", "Fenerbahce", "Besiktas", "Trabzonspor",
-    ]),
-    ("mls", "MLS", "MLS", "usa", 1, True, [
-        "Inter Miami", "LAFC", "LA Galaxy", "Seattle Sounders",
-        "New York City FC", "Columbus Crew", "Atlanta United",
     ]),
     ("brasileirao", "Brasileirao Serie A", "BSA", "brazil", 1, True, [
         "Flamengo", "Palmeiras", "Sao Paulo", "Corinthians", "Fluminense",
         "Botafogo", "Gremio", "Internacional",
     ]),
-    ("liga-profesional", "Liga Profesional", "ARG1", "argentina", 1, True, [
-        "Boca Juniors", "River Plate", "Racing Club", "Independiente",
-    ]),
-    ("egyptian-premier-league", "Egyptian Premier League", "EGY1", "egypt", 1, False, [
-        "Al Ahly", "Zamalek", "Pyramids FC", "Al Masry",
-    ]),
-    ("botola-pro", "Botola Pro", "MAR1", "morocco", 1, False, [
-        "Wydad AC", "Raja Casablanca", "FAR Rabat", "RS Berkane",
-    ]),
-    ("algeria-ligue-1", "Ligue 1 (Algeria)", "DZ1", "algeria", 1, False, [
-        "USM Alger", "CR Belouizdad", "MC Alger", "ES Setif", "JS Kabylie", "USM Bel Abbes",
-    ]),
-    ("tunisia-ligue-1", "Ligue Professionnelle 1", "TN1", "tunisia", 1, False, [
-        "Esperance de Tunis", "Club Africain", "Etoile du Sahel", "CS Sfaxien",
-    ]),
-    ("qatar-stars-league", "Qatar Stars League", "QSL", "qatar", 1, False, [
-        "Al Sadd", "Al Duhail", "Al Rayyan",
-    ]),
-    ("uae-pro-league", "UAE Pro League", "UAE1", "uae", 1, False, [
-        "Al Ain", "Shabab Al Ahli", "Al Wahda",
-    ]),
-    ("j1-league", "J1 League", "JP1", "japan", 1, False, [
-        "Vissel Kobe", "Yokohama F. Marinos", "Urawa Red Diamonds",
-    ]),
-    ("k-league-1", "K League 1", "KR1", "skorea", 1, False, [
-        "Ulsan HD", "Pohang Steelers", "FC Seoul",
-    ]),
-    ("chinese-super-league", "Chinese Super League", "CSL", "china", 1, False, None),
-    ("indian-super-league", "Indian Super League", "ISL", "india", 1, False, [
-        "Mumbai City FC", "Bengaluru FC", "ATK Mohun Bagan",
-    ]),
+    # Champions League: since UEFA's 2024/25 reformat, the league phase has a
+    # real single-table standings (not just groups), which football-data.org
+    # exposes the same way as a domestic league — so it fits the existing
+    # sync path. Off-season (no active league-phase table) until ~September;
+    # sync will just report "no standings data" until then, which is correct.
+    ("champions-league", "UEFA Champions League", "UCL", "europe", 0, True, None),
 ]
 
 GENERIC_CITY_WORDS = [

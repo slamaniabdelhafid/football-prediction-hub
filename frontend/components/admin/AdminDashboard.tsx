@@ -32,8 +32,8 @@ export default function AdminDashboard() {
       const [s, l, m, leaguesRes] = await Promise.all([
         api.adminStats(),
         api.adminLogs(),
-        api.today(),
-        api.leagues(),
+        api.today(false),
+        api.leagues({ liveOnly: false }),
       ]);
       setStats(s);
       setLogs(l);

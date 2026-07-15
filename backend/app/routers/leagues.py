@@ -7,8 +7,10 @@ router = APIRouter(prefix="/api/leagues", tags=["leagues"])
 
 
 @router.get("")
-def list_leagues(country: Optional[str] = None, popular_only: bool = False):
+def list_leagues(country: Optional[str] = None, popular_only: bool = False, live_only: bool = False):
     leagues = list(md.LEAGUES.values())
+    if live_only:
+        leagues = [l for l in leagues if l.data_source == "live"]
     if country:
         leagues = [l for l in leagues if l.country.name.lower() == country.lower()]
     if popular_only:

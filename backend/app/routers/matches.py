@@ -6,6 +6,11 @@ from .. import mock_data as md
 router = APIRouter(prefix="/api/matches", tags=["matches"])
 
 
+def _is_live(match) -> bool:
+    league = md.LEAGUES.get(match.league_id)
+    return bool(league and league.data_source == "live")
+
+
 def _day_matches(offset: int):
     target = (datetime.now(timezone.utc) + timedelta(days=offset)).date()
     return [m for m in md.MATCHES.values() if m.kickoff.date() == target]
@@ -18,10 +23,13 @@ def list_matches(
     min_confidence: Optional[int] = None,
     btts_min: Optional[int] = None,
     over_2_5_min: Optional[int] = None,
+    live_only: bool = False,
 ):
     """General-purpose filterable match listing backing the site's Filters bar."""
     matches = list(md.MATCHES.values())
 
+    if live_only:
+        matches = [m for m in matches if _is_live(m)]
     if day == "today":
         matches = [m for m in matches if m in _day_matches(0)]
     elif day == "tomorrow":
@@ -42,39 +50,56 @@ def list_matches(
 
 
 @router.get("/today")
-def matches_today():
-    return sorted(_day_matches(0), key=lambda m: m.kickoff)
+def matches_today(live_only: bool = False):
+    ms = _day_matches(0)
+    if live_only:
+        ms = [m for m in ms if _is_live(m)]
+    return sorted(ms, key=lambda m: m.kickoff)
 
 
 @router.get("/tomorrow")
-def matches_tomorrow():
-    return sorted(_day_matches(1), key=lambda m: m.kickoff)
+def matches_tomorrow(live_only: bool = False):
+    ms = _day_matches(1)
+    if live_only:
+        ms = [m for m in ms if _is_live(m)]
+    return sorted(ms, key=lambda m: m.kickoff)
 
 
 @router.get("/yesterday")
-def matches_yesterday():
-    return sorted(_day_matches(-1), key=lambda m: m.kickoff)
+def matches_yesterday(live_only: bool = False):
+    ms = _day_matches(-1)
+    if live_only:
+        ms = [m for m in ms if _is_live(m)]
+    return sorted(ms, key=lambda m: m.kickoff)
 
 
 @router.get("/live")
-def matches_live():
-    return [m for m in md.MATCHES.values() if m.status.kind == "live"]
+def matches_live(live_only: bool = False):
+    ms = [m for m in md.MATCHES.values() if m.status.kind == "live"]
+    if live_only:
+        ms = [m for m in ms if _is_live(m)]
+    return ms
 
 
 @router.get("/featured")
-def matches_featured():
-    return [m for m in md.MATCHES.values() if m.featured]
+def matches_featured(live_only: bool = False):
+    ms = [m for m in md.MATCHES.values() if m.featured]
+    if live_only:
+        ms = [m for m in ms if _is_live(m)]
+    return ms
 
 
 @router.get("/top-predictions")
-def top_predictions(min_confidence: int = 85):
+def top_predictions(min_confidence: int = 85, live_only: bool = False):
     ms = [m for m in md.MATCHES.values()
           if m.status.kind == "scheduled" and m.prediction.confidence_pct >= min_confidence]
+    if live_only:
+        ms = [m for m in ms if _is_live(m)]
     return sorted(ms, key=lambda m: m.prediction.confidence_pct, reverse=True)
 
 
 @router.get("/search")
-def search_matches(q: str = Query(..., min_length=2)):
+def search_matches(q: str = Query(..., min_length=2), live_only: bool = False):
     q_low = q.lower()
     results = [
         m for m in md.MATCHES.values()
@@ -82,6 +107,8 @@ def search_matches(q: str = Query(..., min_length=2)):
         or q_low in m.away_team.name.lower()
         or q_low in md.LEAGUES[m.league_id].name.lower()
     ]
+    if live_only:
+        results = [m for m in results if _is_live(m)]
     return sorted(results, key=lambda m: m.kickoff)[:30]
 
 

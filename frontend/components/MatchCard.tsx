@@ -52,16 +52,6 @@ export default function MatchCard({ match, featured = false }: { match: Match; f
       </div>
 
       <PredictionBar prediction={match.prediction} />
-
-      {match.prediction_correct !== null && status.kind === "finished" && (
-        <p
-          className={`mt-3 text-[11px] font-mono ${
-            match.prediction_correct ? "text-turf" : "text-red"
-          }`}
-        >
-          Prediction {match.prediction_correct ? "Correct ✓" : "Missed ✕"}
-        </p>
-      )}
     </Link>
   );
 }

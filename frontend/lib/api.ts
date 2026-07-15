@@ -23,6 +23,7 @@ export const api = {
     minConfidence?: number;
     bttsMin?: number;
     over25Min?: number;
+    liveOnly?: boolean;
   }) => {
     const params = new URLSearchParams();
     if (opts.day) params.set("day", opts.day);
@@ -30,15 +31,17 @@ export const api = {
     if (opts.minConfidence != null) params.set("min_confidence", String(opts.minConfidence));
     if (opts.bttsMin != null) params.set("btts_min", String(opts.bttsMin));
     if (opts.over25Min != null) params.set("over_2_5_min", String(opts.over25Min));
+    params.set("live_only", String(opts.liveOnly ?? true));
     const qs = params.toString();
     return get<Match[]>(`/api/matches${qs ? `?${qs}` : ""}`, 0);
   },
 
   // Leagues
-  leagues: (opts?: { country?: string; popularOnly?: boolean }) => {
+  leagues: (opts?: { country?: string; popularOnly?: boolean; liveOnly?: boolean }) => {
     const params = new URLSearchParams();
     if (opts?.country) params.set("country", opts.country);
     if (opts?.popularOnly) params.set("popular_only", "true");
+    params.set("live_only", String(opts?.liveOnly ?? true));
     const qs = params.toString();
     return get<LeaguesResponse>(`/api/leagues${qs ? `?${qs}` : ""}`);
   },
@@ -47,15 +50,17 @@ export const api = {
   fixtures: (id: string) => get<Match[]>(`/api/leagues/${id}/fixtures`),
   results: (id: string) => get<Match[]>(`/api/leagues/${id}/results`),
 
-  // Matches
-  today: () => get<Match[]>("/api/matches/today", 30),
-  tomorrow: () => get<Match[]>("/api/matches/tomorrow", 30),
-  yesterday: () => get<Match[]>("/api/matches/yesterday", 60),
-  live: () => get<Match[]>("/api/matches/live", 15),
-  featured: () => get<Match[]>("/api/matches/featured", 60),
-  topPredictions: (minConfidence = 85) =>
-    get<Match[]>(`/api/matches/top-predictions?min_confidence=${minConfidence}`, 60),
-  search: (q: string) => get<Match[]>(`/api/matches/search?q=${encodeURIComponent(q)}`, 0),
+  // Matches — liveOnly defaults to true (hide leagues that haven't synced real
+  // data yet); admin passes liveOnly: false to see everything for management.
+  today: (liveOnly = true) => get<Match[]>(`/api/matches/today?live_only=${liveOnly}`, 30),
+  tomorrow: (liveOnly = true) => get<Match[]>(`/api/matches/tomorrow?live_only=${liveOnly}`, 30),
+  yesterday: (liveOnly = true) => get<Match[]>(`/api/matches/yesterday?live_only=${liveOnly}`, 60),
+  live: (liveOnly = true) => get<Match[]>(`/api/matches/live?live_only=${liveOnly}`, 15),
+  featured: (liveOnly = true) => get<Match[]>(`/api/matches/featured?live_only=${liveOnly}`, 60),
+  topPredictions: (minConfidence = 85, liveOnly = true) =>
+    get<Match[]>(`/api/matches/top-predictions?min_confidence=${minConfidence}&live_only=${liveOnly}`, 60),
+  search: (q: string, liveOnly = true) =>
+    get<Match[]>(`/api/matches/search?q=${encodeURIComponent(q)}&live_only=${liveOnly}`, 0),
   matchDetail: (id: string) => get<MatchDetail>(`/api/matches/${id}`, 30),
 
   // Cups
