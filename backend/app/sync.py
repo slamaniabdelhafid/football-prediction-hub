@@ -1,90 +1,88 @@
 """
-Sync: for every league we have a SofaScore tournament-id mapping for, replace
-that league's mock teams/standings/matches with real data pulled from
-SofaScore's public API. Leagues with no mapping stay on the generated mock
-layer, untouched.
+Sync: for every league we have a football-data.org competition-code mapping
+for, replace that league's mock teams/standings/matches with real data.
+Leagues with no mapping stay on the generated mock layer, untouched.
 
-Two-phase, to keep request count low:
-  1. Standings phase — one or two calls per mapped league (seasons, then
-     standings) to rebuild real teams + table + the per-team stats the
-     prediction model needs.
-  2. Matches phase — three calls TOTAL (yesterday/today/tomorrow), each
-     returning every football match worldwide that day; we filter those down
-     to our mapped leagues instead of hitting the API once per league.
+Uses api.football-data.org (see app/providers/football_data.py) — a
+documented, key-authenticated API, not SofaScore's undocumented one. This
+project tried SofaScore first (see git history / app/providers/sofascore.py)
+but its Cloudflare bot-check reliably 403's requests from server hosts like
+Render, which isn't something worth building around for a production sync
+job. football-data.org's free tier is smaller (9 leagues with standings
+tables on our side, out of its 12 total competitions) but it's a real,
+stable, documented API — no key, no data.
 
-No API key required — this is the same public API sofascore.com's own
-frontend calls. See app/providers/sofascore.py for endpoint details and
-app/providers/football_data.py for the older, key-based alternative (kept
-for reference; no longer used by default).
+Needs FOOTBALL_DATA_API_KEY set (free, no card:
+https://www.football-data.org/client/register). If it's not set, run_sync()
+raises immediately and every league stays on mock data — see main.py /
+admin.py, which both catch that and log it clearly rather than crash.
+
+Rate limit: 10 requests/minute on the free tier. Two calls per mapped league
+(standings + matches) -> ~18 calls for all 9 leagues, spaced out below to
+stay under the limit rather than trying to burst and hit 429s.
 """
+import time
 from datetime import datetime, timedelta, timezone
 
 from . import mock_data as md
 from .models import Team, StandingRow, Match, MatchStatus
 from .prediction_model import estimate_prediction
-from .providers.sofascore import (
-    SofaScoreClient, SofaScoreError, LEAGUE_ID_TO_SOFASCORE_ID,
-    sofa_status_to_ours, parse_sofa_timestamp,
-    extract_standings_rows, row_played, row_scores_for, row_scores_against,
+from .providers.football_data import (
+    FootballDataClient, LEAGUE_ID_TO_FD_CODE, fd_status_to_ours, parse_fd_datetime,
 )
+
+REQUEST_DELAY_SECONDS = 6.5  # keeps us under 10 req/min with margin
 
 
 def _team_id(league_id: str, name: str) -> str:
     return f"{league_id}__{md._slug(name)}"
 
 
-def _sync_standings_for_league(
-    client: SofaScoreClient, league_id: str, tournament_id: int
-) -> dict[int, dict] | None:
+def _sync_standings_for_league(client: FootballDataClient, league_id: str, code: str) -> dict[int, dict] | None:
     """
-    Rebuilds teams + standings for one league from SofaScore. Returns a map of
-    {sofascore_team_id: stats_dict} for use in the matches phase, or None if
-    this league couldn't be synced (left on mock data untouched).
+    Rebuilds teams + standings for one league from football-data.org. Returns
+    a map of {fd_team_id: stats_dict} for the matches phase, or None if this
+    league couldn't be synced (left on mock data untouched).
     """
-    season_id = client.get_latest_season_id(tournament_id)
-    if season_id is None:
-        return None
+    data = client.get_standings(code)
+    time.sleep(REQUEST_DELAY_SECONDS)
 
-    standings_json = client.get_standings(tournament_id, season_id)
-    rows = extract_standings_rows(standings_json)
-    if not rows:
+    total_table = next((s.get("table", []) for s in data.get("standings", []) if s.get("type") == "TOTAL"), [])
+    if not total_table:
         return None
 
     new_teams: list[Team] = []
     new_rows: list[StandingRow] = []
-    stats_by_sofa_team_id: dict[int, dict] = {}
+    stats_by_fd_team_id: dict[int, dict] = {}
 
-    for row in rows:
-        sofa_team = row.get("team") or {}
-        sofa_team_id = sofa_team.get("id")
-        name = sofa_team.get("name") or sofa_team.get("shortName")
-        if not sofa_team_id or not name:
-            continue  # malformed row — skip rather than guess
+    for row in total_table:
+        fd_team = row.get("team") or {}
+        fd_team_id = fd_team.get("id")
+        name = fd_team.get("name")
+        if not fd_team_id or not name:
+            continue
 
         tid = _team_id(league_id, name)
         team = Team(
             id=tid, name=name,
-            short_name=(sofa_team.get("nameCode") or name[:3]).upper(),
-            logo=f"https://api.sofascore.app/api/v1/team/{sofa_team_id}/image",
+            short_name=(fd_team.get("tla") or name[:3]).upper(),
+            logo=fd_team.get("crest") or "",
             league_id=league_id,
         )
         new_teams.append(team)
 
-        played = row_played(row)
-        gf = row_scores_for(row)
-        ga = row_scores_against(row)
-        wins = row.get("wins", 0) or 0
-        draws = row.get("draws", 0) or 0
-        losses = row.get("losses", 0) or 0
-        points = row.get("points", wins * 3 + draws) or 0
+        played = row.get("playedGames", 0) or 0
+        gf = row.get("goalsFor", 0) or 0
+        ga = row.get("goalsAgainst", 0) or 0
+        points = row.get("points", 0) or 0
 
         new_rows.append(StandingRow(
             position=row.get("position", 0) or 0, team=team, played=played,
-            wins=wins, draws=draws, losses=losses,
-            goals_for=gf, goals_against=ga, goal_diff=gf - ga,
-            points=points, form=[],  # SofaScore's total-standings row has no last-5 form field
+            wins=row.get("won", 0) or 0, draws=row.get("draw", 0) or 0, losses=row.get("lost", 0) or 0,
+            goals_for=gf, goals_against=ga, goal_diff=row.get("goalDifference", gf - ga),
+            points=points, form=[],
         ))
-        stats_by_sofa_team_id[sofa_team_id] = {
+        stats_by_fd_team_id[fd_team_id] = {
             "team_id": tid, "points": points, "played": max(played, 1),
             "goal_diff": gf - ga,
             "avg_scored": gf / max(played, 1), "avg_conceded": ga / max(played, 1),
@@ -101,61 +99,41 @@ def _sync_standings_for_league(
     md.STANDINGS[league_id] = new_rows
     md.LEAGUES[league_id].data_source = "live"
 
-    return stats_by_sofa_team_id
+    return stats_by_fd_team_id
 
 
-def _sync_matches_from_daily_events(
-    client: SofaScoreClient,
-    stats_by_league: dict[str, dict[int, dict]],
-    sofa_id_to_league_id: dict[int, str],
+def _sync_matches_for_league(
+    client: FootballDataClient, league_id: str, code: str, team_stats: dict[int, dict]
 ) -> int:
-    """
-    Pulls yesterday/today/tomorrow's full worldwide event list (3 calls) and
-    builds Match objects only for events belonging to leagues we successfully
-    synced standings for. Returns the number of matches written.
-    """
+    """Pulls yesterday/today/tomorrow's matches for one competition. One API call."""
     now = datetime.now(timezone.utc)
-    dates = [(now + timedelta(days=d)).strftime("%Y-%m-%d") for d in (-1, 0, 1)]
+    date_from = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    date_to = (now + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    all_events: list[dict] = []
-    for date_str in dates:
-        data = client.get_scheduled_events(date_str)
-        all_events.extend(data.get("events", []))
+    data = client.get_matches(code, date_from=date_from, date_to=date_to)
+    time.sleep(REQUEST_DELAY_SECONDS)
 
-    # Drop old mock/live matches for every league we're about to replace
-    synced_league_ids = set(stats_by_league.keys())
-    for mid in [m for m, match in md.MATCHES.items() if match.league_id in synced_league_ids]:
+    for mid in [m for m, match in md.MATCHES.items() if match.league_id == league_id]:
         del md.MATCHES[mid]
 
     written = 0
-    for ev in all_events:
-        tournament = (ev.get("tournament") or {}).get("uniqueTournament") or {}
-        sofa_tid = tournament.get("id")
-        league_id = sofa_id_to_league_id.get(sofa_tid)
-        if league_id is None or league_id not in stats_by_league:
-            continue  # not one of our mapped leagues
-
-        team_stats = stats_by_league[league_id]
-        home_sofa = (ev.get("homeTeam") or {}).get("id")
-        away_sofa = (ev.get("awayTeam") or {}).get("id")
-        home_stats = team_stats.get(home_sofa)
-        away_stats = team_stats.get(away_sofa)
+    for ev in data.get("matches", []):
+        home_fd = (ev.get("homeTeam") or {}).get("id")
+        away_fd = (ev.get("awayTeam") or {}).get("id")
+        home_stats = team_stats.get(home_fd)
+        away_stats = team_stats.get(away_fd)
         if not home_stats or not away_stats:
-            continue  # e.g. cup fixture between teams outside the league table — skip rather than guess
+            continue  # e.g. a cup fixture team not in this league's table
 
         home_team = md.TEAMS.get(home_stats["team_id"])
         away_team = md.TEAMS.get(away_stats["team_id"])
         if not home_team or not away_team:
             continue
 
-        home_score = (ev.get("homeScore") or {}).get("current")
-        away_score = (ev.get("awayScore") or {}).get("current")
-        status_type = (ev.get("status") or {}).get("type", "notstarted")
-        status = MatchStatus(
-            kind=sofa_status_to_ours(status_type),
-            home_score=home_score, away_score=away_score,
-            minute=(ev.get("status") or {}).get("minute") if sofa_status_to_ours(status_type) == "live" else None,
-        )
+        score = (ev.get("score") or {}).get("fullTime") or {}
+        home_score, away_score = score.get("home"), score.get("away")
+        status_kind = fd_status_to_ours(ev.get("status", "SCHEDULED"))
+        status = MatchStatus(kind=status_kind, home_score=home_score, away_score=away_score, minute=None)
 
         prediction = estimate_prediction(
             home_stats["points"], home_stats["played"], home_stats["goal_diff"],
@@ -170,15 +148,14 @@ def _sync_matches_from_daily_events(
             actual = "home" if home_score > away_score else ("away" if away_score > home_score else "draw")
             correct = (actual == prediction.predicted_winner)
 
-        start_ts = ev.get("startTimestamp")
-        if not start_ts:
+        utc_date = ev.get("utcDate")
+        if not utc_date:
             continue
-        venue = ((ev.get("venue") or {}).get("stadium") or {}).get("name") or (ev.get("venue") or {}).get("name")
 
-        mid = f"sofa__{league_id}__{ev.get('id')}"
+        mid = f"fd__{league_id}__{ev.get('id')}"
         md.MATCHES[mid] = Match(
             id=mid, league_id=league_id, home_team=home_team, away_team=away_team,
-            kickoff=parse_sofa_timestamp(start_ts), stadium=venue,
+            kickoff=parse_fd_datetime(utc_date), stadium=(ev.get("venue") or None),
             status=status, prediction=prediction, featured=False, prediction_correct=correct,
         )
         written += 1
@@ -188,41 +165,31 @@ def _sync_matches_from_daily_events(
 
 def run_sync(only_league_ids: list[str] | None = None) -> dict:
     """
-    Pulls real data for every mapped league (or a subset of it). Returns a
-    summary dict for the admin sync log. Safe to call at any time — a failure
-    on one league is caught and logged; leagues that already synced keep
-    their real data, and unsynced ones simply stay on mock data.
+    Pulls real data for every mapped league (or a subset). Returns a summary
+    dict for the admin sync log. A failure on one league is caught and
+    logged; leagues that already synced keep their data, unsynced ones stay
+    on mock data. Raises immediately (uncaught) only if FOOTBALL_DATA_API_KEY
+    is missing entirely — callers (admin.py, main.py) catch that.
     """
     targets = {
-        lid: tid for lid, tid in LEAGUE_ID_TO_SOFASCORE_ID.items()
+        lid: code for lid, code in LEAGUE_ID_TO_FD_CODE.items()
         if only_league_ids is None or lid in only_league_ids
     }
-    sofa_id_to_league_id = {tid: lid for lid, tid in targets.items()}
 
-    client = SofaScoreClient()
-    synced, failed = [], []
-    stats_by_league: dict[str, dict[int, dict]] = {}
-    matches_written = 0
+    client = FootballDataClient()  # raises RuntimeError here if no API key set
+    synced, failed, matches_written = [], [], 0
 
     try:
-        for league_id, tournament_id in targets.items():
+        for league_id, code in targets.items():
             try:
-                stats = _sync_standings_for_league(client, league_id, tournament_id)
-                if stats:
-                    stats_by_league[league_id] = stats
-                    synced.append(league_id)
-                else:
+                stats = _sync_standings_for_league(client, league_id, code)
+                if not stats:
                     failed.append({"league_id": league_id, "error": "No standings data returned"})
-            except SofaScoreError as e:
+                    continue
+                matches_written += _sync_matches_for_league(client, league_id, code, stats)
+                synced.append(league_id)
+            except Exception as e:
                 failed.append({"league_id": league_id, "error": str(e)})
-
-        if stats_by_league:
-            try:
-                matches_written = _sync_matches_from_daily_events(
-                    client, stats_by_league, sofa_id_to_league_id,
-                )
-            except SofaScoreError as e:
-                failed.append({"league_id": "*matches*", "error": str(e)})
     finally:
         client.close()
 

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime, timezone
+import os
 from .. import mock_data as md
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -47,27 +48,33 @@ def toggle_league(league_id: str, enabled: bool = True):
 @router.post("/sync")
 def trigger_sync():
     """
-    Pulls real data for every SofaScore-mapped league. No API key needed —
-    see app/providers/sofascore.py. Any per-league failure is caught inside
-    run_sync() itself, so this only hits the except branch on a total outage
-    (e.g. no network, or SofaScore blocking the request entirely).
+    If FOOTBALL_DATA_API_KEY is set, pulls real data for the mapped leagues
+    (see app/providers/football_data.py). Otherwise logs a clear "no key"
+    entry rather than silently doing nothing.
     """
     _state["last_sync"] = datetime.now(timezone.utc)
 
-    from .. import sync as sync_module
-    try:
-        result = sync_module.run_sync()
+    if not os.environ.get("FOOTBALL_DATA_API_KEY"):
         detail = (
-            f"Synced {len(result['synced_leagues'])} leagues, "
-            f"{result['matches_synced']} matches, from SofaScore"
+            "No FOOTBALL_DATA_API_KEY set — get a free key at "
+            "football-data.org/client/register and set it as an env var, then retry."
         )
-        if result["failed_leagues"]:
-            reasons = "; ".join(f"{f['league_id']}: {f['error']}" for f in result["failed_leagues"])
-            detail += f" — FAILED: {reasons}"
-        status = "ok" if not result["failed_leagues"] else "partial"
-    except Exception as e:
-        detail = f"Live sync failed: {e}"
         status = "error"
+    else:
+        from .. import sync as sync_module
+        try:
+            result = sync_module.run_sync()
+            detail = (
+                f"Synced {len(result['synced_leagues'])} leagues, "
+                f"{result['matches_synced']} matches, from football-data.org"
+            )
+            if result["failed_leagues"]:
+                reasons = "; ".join(f"{f['league_id']}: {f['error']}" for f in result["failed_leagues"])
+                detail += f" — FAILED: {reasons}"
+            status = "ok" if not result["failed_leagues"] else "partial"
+        except Exception as e:
+            detail = f"Live sync failed: {e}"
+            status = "error"
 
     _state["sync_log"].insert(0, {"time": _state["last_sync"].isoformat(), "status": status, "detail": detail})
     return {"ok": status != "error", "last_sync": _state["last_sync"], "detail": detail}

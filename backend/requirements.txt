@@ -5,7 +5,7 @@ apscheduler==3.10.4
 httpx==0.27.2
 python-dotenv==1.0.1
 
-# Used by app/providers/sofascore.py — plain httpx/requests get a 403
-# Cloudflare challenge from SofaScore's API; curl_cffi's browser TLS
-# impersonation is what gets past it (see that file's docstring).
-curl_cffi>=0.11.4
+# Note: app/providers/sofascore.py is kept in the repo for reference (it
+# was tried first) but is no longer imported by sync.py — SofaScore's
+# Cloudflare bot-check reliably blocks server hosts like Render. If you
+# revive it, you'll need to add back: curl_cffi>=0.11.4

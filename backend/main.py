@@ -16,13 +16,16 @@ scheduler = BackgroundScheduler()
 
 
 def daily_sync_job():
-    """Runs once a day. Pulls real data from SofaScore — no API key needed."""
+    """Runs once a day. No-op (logs and returns) if no API key is configured."""
+    if not os.environ.get("FOOTBALL_DATA_API_KEY"):
+        logger.info("Sync skipped: FOOTBALL_DATA_API_KEY not set (mock-data mode).")
+        return
     from app import sync as sync_module
     try:
         result = sync_module.run_sync()
-        logger.info("Daily sync complete: %s", result)
+        logger.info("Sync complete: %s", result)
     except Exception:
-        logger.exception("Daily sync failed")
+        logger.exception("Sync failed")
 
 
 @asynccontextmanager
@@ -40,9 +43,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Football Prediction Hub API",
     version="0.1.0",
-    description="Backend for Football Prediction Hub. Pulls real teams/standings/matches "
-                 "from SofaScore for mapped leagues on startup and once daily; unmapped "
-                 "leagues stay on generated mock data (see docs/API_INTEGRATION.md).",
+    description="Backend for Football Prediction Hub. Runs on mock data by default; "
+                 "set FOOTBALL_DATA_API_KEY to enable real data for mapped leagues "
+                 "(see docs/API_INTEGRATION.md).",
     lifespan=lifespan,
 )
 
