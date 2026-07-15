@@ -60,8 +60,10 @@ def trigger_sync():
         detail = (
             f"Synced {len(result['synced_leagues'])} leagues, "
             f"{result['matches_synced']} matches, from SofaScore"
-            + (f" ({len(result['failed_leagues'])} leagues failed)" if result["failed_leagues"] else "")
         )
+        if result["failed_leagues"]:
+            reasons = "; ".join(f"{f['league_id']}: {f['error']}" for f in result["failed_leagues"])
+            detail += f" — FAILED: {reasons}"
         status = "ok" if not result["failed_leagues"] else "partial"
     except Exception as e:
         detail = f"Live sync failed: {e}"
