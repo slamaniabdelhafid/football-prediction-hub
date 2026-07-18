@@ -1,9 +1,25 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header, Depends
 from datetime import datetime, timezone
 import os
 from .. import mock_data as md
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+def require_admin(x_admin_key: str | None = Header(default=None)):
+    """
+    Protects every route in this router. Set ADMIN_SECRET as an env var to
+    require it; if ADMIN_SECRET isn't set at all, admin routes stay open
+    (convenient for local dev) but a clear warning is logged at startup —
+    see main.py. Set it before going live so /admin isn't reachable by
+    anyone who finds the URL.
+    """
+    expected = os.environ.get("ADMIN_SECRET")
+    if not expected:
+        return  # not configured — open (dev mode)
+    if x_admin_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin key")
+
+
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 # In-memory "state" for the demo — in Stage 7 this becomes real DB rows.
 _state = {

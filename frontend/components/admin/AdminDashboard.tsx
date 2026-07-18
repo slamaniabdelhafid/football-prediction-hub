@@ -16,7 +16,7 @@ type Stats = {
 };
 type LogEntry = { time: string; status: string; detail: string };
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ adminKey }: { adminKey: string }) {
   const [tab, setTab] = useState<TabKey>("overview");
   const [stats, setStats] = useState<Stats | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -30,8 +30,8 @@ export default function AdminDashboard() {
   const loadAll = useCallback(async () => {
     try {
       const [s, l, m, leaguesRes] = await Promise.all([
-        api.adminStats(),
-        api.adminLogs(),
+        api.adminStats(adminKey),
+        api.adminLogs(adminKey),
         api.today(false),
         api.leagues({ liveOnly: false }),
       ]);
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     } catch {
       setError("Can't reach the backend API. Make sure uvicorn is running on the configured host.");
     }
-  }, []);
+  }, [adminKey]);
 
   useEffect(() => {
     loadAll();
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
   async function handleSync() {
     setSyncing(true);
     try {
-      await api.adminTriggerSync();
+      await api.adminTriggerSync(adminKey);
       await loadAll();
     } catch {
       setError("Sync request failed.");
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
   async function handleToggleFeature(matchId: string, next: boolean) {
     setPendingMatchIds((prev) => new Set(prev).add(matchId));
     try {
-      await api.adminFeatureMatch(matchId, next);
+      await api.adminFeatureMatch(matchId, next, adminKey);
       setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, featured: next } : m)));
     } catch {
       setError("Could not update match.");
@@ -80,7 +80,7 @@ export default function AdminDashboard() {
   async function handleToggleLeague(leagueId: string, next: boolean) {
     setPendingLeagueIds((prev) => new Set(prev).add(leagueId));
     try {
-      await api.adminToggleLeague(leagueId, next);
+      await api.adminToggleLeague(leagueId, next, adminKey);
       setLeagues((prev) => prev.map((l) => (l.id === leagueId ? { ...l, popular: next } : l)));
     } catch {
       setError("Could not update league.");

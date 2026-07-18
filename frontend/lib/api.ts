@@ -4,6 +4,13 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
+async function assertOk<T = unknown>(res: Response): Promise<T> {
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 async function get<T>(path: string, revalidateSeconds = 60): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     next: { revalidate: revalidateSeconds },
@@ -67,33 +74,34 @@ export const api = {
   cups: () => get<Cup[]>("/api/cups", 300),
   cupDetail: (id: string) => get<CupDetail>(`/api/cups/${id}`, 60),
 
-  // Admin
-  adminStats: () =>
-    get<{
-      total_leagues: number; total_teams: number; total_matches: number;
-      matches_today: number; api_status: string; last_sync: string;
-    }>("/api/admin/stats", 0),
-  adminLogs: () =>
-    get<{ time: string; status: string; detail: string }[]>("/api/admin/logs", 0),
-  adminTriggerSync: async () => {
-    const res = await fetch(`${API_BASE}/api/admin/sync`, { method: "POST" });
-    if (!res.ok) throw new Error("Sync failed");
-    return res.json();
-  },
-  adminFeatureMatch: async (matchId: string, featured: boolean) => {
-    const res = await fetch(
+  // Admin — every call needs the admin key (set once via the password
+  // gate on /admin, stored in sessionStorage, passed in here explicitly
+  // rather than read from storage inside lib/api.ts, so this file stays
+  // usable from both client and server contexts).
+  adminStats: (adminKey: string) =>
+    fetch(`${API_BASE}/api/admin/stats`, { headers: { "X-Admin-Key": adminKey } })
+      .then((res) => assertOk<{
+        total_leagues: number; total_teams: number; total_matches: number;
+        matches_today: number; api_status: string; last_sync: string;
+      }>(res)),
+  adminLogs: (adminKey: string) =>
+    fetch(`${API_BASE}/api/admin/logs`, { headers: { "X-Admin-Key": adminKey } })
+      .then((res) => assertOk<{ time: string; status: string; detail: string }[]>(res)),
+  adminTriggerSync: (adminKey: string) =>
+    fetch(`${API_BASE}/api/admin/sync`, { method: "POST", headers: { "X-Admin-Key": adminKey } })
+      .then((res) => assertOk<{ ok: boolean; detail: string }>(res)),
+  adminFeatureMatch: (matchId: string, featured: boolean, adminKey: string) =>
+    fetch(
       `${API_BASE}/api/admin/matches/${matchId}/feature?featured=${featured}`,
-      { method: "POST" },
-    );
-    if (!res.ok) throw new Error("Update failed");
-    return res.json();
-  },
-  adminToggleLeague: async (leagueId: string, enabled: boolean) => {
-    const res = await fetch(
+      { method: "POST", headers: { "X-Admin-Key": adminKey } },
+    ).then((res) => assertOk(res)),
+  adminToggleLeague: (leagueId: string, enabled: boolean, adminKey: string) =>
+    fetch(
       `${API_BASE}/api/admin/leagues/${leagueId}/toggle?enabled=${enabled}`,
-      { method: "POST" },
-    );
-    if (!res.ok) throw new Error("Update failed");
-    return res.json();
-  },
+      { method: "POST", headers: { "X-Admin-Key": adminKey } },
+    ).then((res) => assertOk(res)),
+  // Used only by the password gate itself, to check a key is valid before
+  // storing it — hits the cheapest admin route rather than a dedicated one.
+  adminCheckKey: (adminKey: string) =>
+    fetch(`${API_BASE}/api/admin/stats`, { headers: { "X-Admin-Key": adminKey } }),
 };

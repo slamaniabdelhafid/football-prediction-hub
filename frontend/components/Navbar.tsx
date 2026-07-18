@@ -11,7 +11,6 @@ const LINKS = [
   { href: "/leagues", label: "Leagues" },
   { href: "/cups", label: "Cups" },
   { href: "/matches", label: "Matches" },
-  { href: "/admin", label: "Admin" },
 ];
 
 export default function Navbar() {

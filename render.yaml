@@ -9,5 +9,19 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
+        # Pinned because Render's current default (3.14) has no prebuilt
+        # wheel yet for pydantic-core, so pip tries to compile it from Rust
+        # source and fails (Render's build cache dir is read-only for cargo).
+        # 3.12 has prebuilt wheels for every dependency here.
       - key: ALLOWED_ORIGINS
         value: http://localhost:3000
+        # Update this in the Render dashboard after your Netlify site is live,
+        # e.g. http://localhost:3000,https://your-site.netlify.app
+      - key: FOOTBALL_DATA_API_KEY
+        sync: false
+        # Set the real value in the Render dashboard (Environment tab), not here —
+        # this file is committed to git, so it's not the place for actual secrets.
+      - key: ADMIN_SECRET
+        sync: false
+        # Same — set a real random value in the Render dashboard. Required
+        # before making the site public; protects /api/admin/*.

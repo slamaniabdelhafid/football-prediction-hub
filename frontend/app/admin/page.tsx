@@ -1,4 +1,4 @@
-import AdminDashboard from "@/components/admin/AdminDashboard";
+import AdminGate from "@/components/admin/AdminGate";
 
 export default function AdminPage() {
   return (
@@ -9,7 +9,7 @@ export default function AdminPage() {
       <h1 className="font-display font-extrabold text-3xl sm:text-4xl uppercase tracking-tight mb-8">
         Admin Dashboard
       </h1>
-      <AdminDashboard />
+      <AdminGate />
     </div>
   );
 }

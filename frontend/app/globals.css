@@ -49,6 +49,18 @@ body {
   animation: fillBar 700ms ease-out;
 }
 
+/* Loading screen: bouncing football + shrinking shadow */
+@keyframes fph-bounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-30px) rotate(170deg); }
+}
+@keyframes fph-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.3; }
+  50% { transform: scaleX(0.55); opacity: 0.12; }
+}
+.animate-fph-bounce { animation: fph-bounce 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.animate-fph-shadow { animation: fph-shadow 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+
 /* Live status pulse */
 @keyframes livePulse {
   0%, 100% { opacity: 1; }

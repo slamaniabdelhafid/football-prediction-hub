@@ -16,7 +16,11 @@ scheduler = BackgroundScheduler()
 
 
 def daily_sync_job():
-    """Runs once a day. No-op (logs and returns) if no API key is configured."""
+    """
+    Runs every 15 minutes (see lifespan() below). No-op (logs and returns)
+    if no API key is configured. Function name kept from when this ran once
+    a day — it's the same job, just scheduled more often now.
+    """
     if not os.environ.get("FOOTBALL_DATA_API_KEY"):
         logger.info("Sync skipped: FOOTBALL_DATA_API_KEY not set (mock-data mode).")
         return
@@ -30,10 +34,24 @@ def daily_sync_job():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 04:00 UTC daily — after most matches worldwide have finished, before the new day's fixtures matter
-    scheduler.add_job(daily_sync_job, "cron", hour=4, minute=0, id="daily_sync")
+    if not os.environ.get("ADMIN_SECRET"):
+        logger.warning(
+            "ADMIN_SECRET is not set — /api/admin/* routes are OPEN to anyone who finds "
+            "the URL. Set ADMIN_SECRET as an env var before sharing this site publicly."
+        )
+
+    # Every 15 minutes: a full sync is ~20 API calls (2 per mapped league)
+    # spaced ~7s apart by sync.py's own rate limiting, so one run takes ~2-2.5
+    # minutes. 15-minute spacing keeps this comfortably under football-data.org's
+    # 10-requests/minute free-tier cap over any rolling window, while still
+    # being close to real-time for scores. A 5-minute interval was considered
+    # but rejected: back-to-back runs could still be finishing (or the lock in
+    # sync.py would just skip the overlapping one — see SYNC_LOCK), and it's
+    # a lot more continuous load on a free public API than it needs for data
+    # that mostly changes a few times an hour anyway.
+    scheduler.add_job(daily_sync_job, "interval", minutes=15, id="periodic_sync")
     # Also run once shortly after boot, in the background, so real data shows
-    # up without waiting for the next 04:00 UTC or a manual admin trigger.
+    # up without waiting 15 minutes or a manual admin trigger.
     scheduler.add_job(daily_sync_job, "date", id="startup_sync")
     scheduler.start()
     yield
@@ -44,8 +62,8 @@ app = FastAPI(
     title="Football Prediction Hub API",
     version="0.1.0",
     description="Backend for Football Prediction Hub. Runs on mock data by default; "
-                 "set FOOTBALL_DATA_API_KEY to enable real data for mapped leagues "
-                 "(see docs/API_INTEGRATION.md).",
+                 "set FOOTBALL_DATA_API_KEY to enable real data for mapped leagues, "
+                 "and ADMIN_SECRET to protect /api/admin/* (see docs/API_INTEGRATION.md).",
     lifespan=lifespan,
 )
 

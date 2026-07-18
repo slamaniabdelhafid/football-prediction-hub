@@ -211,6 +211,8 @@ def run_sync(only_league_ids: list[str] | None = None) -> dict:
         finally:
             client.close()
 
+        _refresh_featured_matches()
+
         return {
             "synced_leagues": synced,
             "failed_leagues": failed,
@@ -219,3 +221,25 @@ def run_sync(only_league_ids: list[str] | None = None) -> dict:
         }
     finally:
         SYNC_LOCK.release()
+
+
+def _refresh_featured_matches(top_n: int = 4) -> None:
+    """
+    sync.py never sets featured=True on individual matches while syncing
+    each league (no per-match signal for it in football-data.org's data),
+    so without this the home page's Featured Matches section would just stay
+    permanently empty once real data replaces mock data. Instead, after each
+    full sync, mark the N highest-confidence upcoming real matches across all
+    synced leagues as featured — real matches only, never mock/simulated ones.
+    """
+    for m in md.MATCHES.values():
+        m.featured = False
+
+    live_league_ids = {lid for lid, l in md.LEAGUES.items() if l.data_source == "live"}
+    upcoming_live = [
+        m for m in md.MATCHES.values()
+        if m.league_id in live_league_ids and m.status.kind == "scheduled"
+    ]
+    upcoming_live.sort(key=lambda m: m.prediction.confidence_pct, reverse=True)
+    for m in upcoming_live[:top_n]:
+        m.featured = True
