@@ -3,10 +3,31 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+// Set NEXT_PUBLIC_SITE_URL on Netlify once you have a real domain (or the
+// netlify.app URL) — used to build absolute URLs for OG images, canonical
+// links, and the sitemap. Falls back to localhost so local dev still works.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Football Prediction Hub",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Football Prediction Hub — Real Fixtures, Standings & Match Predictions",
+    template: "%s | Football Prediction Hub",
+  },
   description:
-    "Daily fixtures, standings, stats, and match prediction probabilities across football leagues worldwide.",
+    "Daily fixtures, standings, stats, and statistical match prediction probabilities across the Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and more.",
+  openGraph: {
+    type: "website",
+    siteName: "Football Prediction Hub",
+    title: "Football Prediction Hub — Real Fixtures, Standings & Match Predictions",
+    description:
+      "Daily fixtures, standings, stats, and statistical match prediction probabilities across major football leagues.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Football Prediction Hub",
+    description: "Real fixtures, standings, and statistical match predictions.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

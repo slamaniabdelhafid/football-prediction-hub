@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { api } from "@/lib/api";
 import CupCard from "@/components/cups/CupCard";
+
+export const metadata: Metadata = {
+  title: "Cup Competitions — World Cup Bracket & Predictions",
+  description:
+    "Live knockout bracket, group standings, and match predictions for the FIFA World Cup 2026.",
+};
 
 export default async function CupsPage() {
   const cups = await api.cups().catch(() => []);

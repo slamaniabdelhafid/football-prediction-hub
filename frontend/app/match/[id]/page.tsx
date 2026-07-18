@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { api } from "@/lib/api";
 import PredictionBar from "@/components/PredictionBar";
 import AdditionalPredictions from "@/components/AdditionalPredictions";
@@ -14,6 +15,25 @@ function formatKickoff(iso: string) {
   });
 }
 
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  try {
+    const { match } = await api.matchDetail(params.id);
+    const leagueName = match.league_id.replace(/-/g, " ");
+    const title = `${match.home_team.name} vs ${match.away_team.name} Prediction`;
+    const description =
+      `${match.home_team.name} vs ${match.away_team.name} — ${leagueName} match on ` +
+      `${formatKickoff(match.kickoff)}. Win probabilities: ${match.prediction.home_win_pct}% home, ` +
+      `${match.prediction.draw_pct}% draw, ${match.prediction.away_win_pct}% away, based on current form and standings.`;
+    return {
+      title, description,
+      openGraph: { title, description },
+      twitter: { title, description },
+    };
+  } catch {
+    return { title: "Match Prediction" };
+  }
+}
+
 export default async function MatchDetailPage({ params }: { params: { id: string } }) {
   let detail;
   try {
@@ -25,8 +45,34 @@ export default async function MatchDetailPage({ params }: { params: { id: string
   const { match, home_stats, away_stats, head_to_head, standings_snapshot } = detail;
   const { status } = match;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    name: `${match.home_team.name} vs ${match.away_team.name}`,
+    startDate: match.kickoff,
+    sport: "Football",
+    location: match.stadium
+      ? { "@type": "Place", name: match.stadium }
+      : undefined,
+    homeTeam: { "@type": "SportsTeam", name: match.home_team.name },
+    awayTeam: { "@type": "SportsTeam", name: match.away_team.name },
+    eventStatus:
+      status.kind === "finished"
+        ? "https://schema.org/EventCompleted"
+        : status.kind === "live"
+        ? "https://schema.org/EventScheduled"
+        : "https://schema.org/EventScheduled",
+    ...(status.kind === "finished" && status.home_score != null && status.away_score != null
+      ? { description: `Final score: ${match.home_team.name} ${status.home_score} - ${status.away_score} ${match.away_team.name}` }
+      : {}),
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Match header */}
       <div className="text-center mb-10">
         <p className="text-[11px] font-mono text-turf uppercase tracking-widest mb-2">

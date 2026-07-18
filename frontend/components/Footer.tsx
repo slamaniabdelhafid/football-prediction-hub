@@ -9,6 +9,14 @@ export default function Footer() {
           <p className="text-text-dim text-sm mt-1 max-w-md">
             Fixtures, standings, stats, and prediction probabilities — not a betting site.
           </p>
+          <div className="flex gap-4 mt-3">
+            <a href="/privacy" className="text-text-dim text-xs font-mono hover:text-text underline">
+              Privacy Policy
+            </a>
+            <a href="/terms" className="text-text-dim text-xs font-mono hover:text-text underline">
+              Terms of Use
+            </a>
+          </div>
         </div>
         <p className="text-text-dim text-xs font-mono">
           Data refreshes daily · Predictions are statistical estimates, not guarantees

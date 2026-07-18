@@ -1,7 +1,19 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { api } from "@/lib/api";
 import LeagueTabs from "@/components/LeagueTabs";
 import DataSourceBadge from "@/components/DataSourceBadge";
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  try {
+    const league = await api.league(params.slug);
+    const title = `${league.name} — Standings & Fixtures`;
+    const description = `Real ${league.name} table, upcoming fixtures, and results for the ${league.season} season, with statistical match predictions.`;
+    return { title, description, openGraph: { title, description }, twitter: { title, description } };
+  } catch {
+    return { title: "League" };
+  }
+}
 
 export default async function LeagueDetailPage({ params }: { params: { slug: string } }) {
   let league;

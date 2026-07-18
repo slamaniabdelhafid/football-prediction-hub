@@ -1,7 +1,19 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { api } from "@/lib/api";
 import TournamentBracket from "@/components/cups/TournamentBracket";
 import GroupsGrid from "@/components/cups/GroupsGrid";
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  try {
+    const { cup } = await api.cupDetail(params.id);
+    const title = `${cup.name} — Bracket & Predictions`;
+    const description = `${cup.name} knockout bracket, group standings, and real results, hosted by ${cup.host}.`;
+    return { title, description, openGraph: { title, description }, twitter: { title, description } };
+  } catch {
+    return { title: "Cup" };
+  }
+}
 
 export default async function CupDetailPage({ params }: { params: { id: string } }) {
   let detail;

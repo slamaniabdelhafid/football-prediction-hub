@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { api } from "@/lib/api";
 import LeagueCard from "@/components/LeagueCard";
+
+export const metadata: Metadata = {
+  title: "Leagues — Standings & Fixtures",
+  description:
+    "Real standings and fixtures for the Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Eredivisie, Primeira Liga, Brasileirão, and the UEFA Champions League.",
+};
 
 export default async function LeaguesPage() {
   const data = await api.leagues().catch(() => ({ total: 0, countries: [] }));
