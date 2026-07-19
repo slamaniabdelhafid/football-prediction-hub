@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
 
-from app.routers import leagues, matches, admin, cups
+from app.routers import leagues, matches, admin
 
 load_dotenv()  # reads backend/.env if present
 
@@ -85,7 +85,6 @@ app.add_middleware(
 app.include_router(leagues.router)
 app.include_router(matches.router)
 app.include_router(admin.router)
-app.include_router(cups.router)
 
 
 @app.get("/api/health")

@@ -9,7 +9,6 @@ import SearchBox from "./SearchBox";
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/leagues", label: "Leagues" },
-  { href: "/cups", label: "Cups" },
   { href: "/matches", label: "Matches" },
 ];
 

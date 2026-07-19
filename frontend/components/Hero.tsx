@@ -16,7 +16,7 @@ export default function Hero({ marquee }: { marquee: Match | null }) {
           </h1>
           <p className="text-text-dim mt-5 max-w-lg text-base sm:text-lg">
             Fixtures, results, standings, and statistical match predictions across{" "}
-            <span className="text-text font-medium">every major league in the world</span> —
+            <span className="text-text font-medium">every major league in the world</span> 
             updated every day.
           </p>
         </div>

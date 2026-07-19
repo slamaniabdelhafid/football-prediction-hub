@@ -22,18 +22,6 @@ class League(BaseModel):
     data_source: str = "simulated"   # "simulated" | "live" — set to "live" after a successful real sync
 
 
-class GroupStanding(BaseModel):
-    position: int
-    team_name: str
-    qualified: bool = False
-    result_note: str = ""   # e.g. "Group Winner", "Runner-up", "Best Third", "Eliminated"
-
-
-class CupGroup(BaseModel):
-    name: str          # "Group A"
-    standings: List[GroupStanding]
-
-
 class Team(BaseModel):
     id: str
     name: str
@@ -120,34 +108,3 @@ class MatchDetail(BaseModel):
     away_stats: TeamStats
     head_to_head: List[HeadToHead]
     standings_snapshot: List[StandingRow]
-
-
-class KnockoutMatch(BaseModel):
-    id: str
-    round: str          # "Round of 16" | "Quarterfinal" | "Semifinal" | "Third Place" | "Final"
-    home_team: Optional[str] = None
-    away_team: Optional[str] = None
-    home_placeholder: Optional[str] = None   # e.g. "Winner QF1" when team not yet decided
-    away_placeholder: Optional[str] = None
-    kickoff: datetime
-    venue: Optional[str] = None
-    status: MatchStatus
-    penalty_home: Optional[int] = None
-    penalty_away: Optional[int] = None
-    prediction: Optional[Prediction] = None
-    slot: int = 0        # position within its round, for bracket layout
-
-
-class Cup(BaseModel):
-    id: str
-    name: str
-    season: str
-    host: str
-    data_source: str = "simulated"
-    snapshot_note: Optional[str] = None   # e.g. "Real results as of Jul 11, 2026"
-
-
-class CupDetail(BaseModel):
-    cup: Cup
-    groups: List[CupGroup]
-    knockout: List[KnockoutMatch]

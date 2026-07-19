@@ -32,8 +32,8 @@ LEAGUE_ID_TO_FD_CODE = {
     # way as a domestic league — fits the existing standings-based sync path.
     "champions-league": "CL",
     # EC (Euros) and WC (World Cup) are knockout/group tournaments without a
-    # standings table in this sense, and are handled separately by the Cups
-    # feature (app/mock_cups.py) instead of this league-sync path.
+    # standings table in this sense, so they don't fit this league-sync path
+    # at all — not included here.
 }
 
 

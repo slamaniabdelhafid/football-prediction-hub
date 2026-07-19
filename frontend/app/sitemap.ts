@@ -8,7 +8,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE_URL, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/leagues`, changeFrequency: "daily", priority: 0.9 },
     { url: `${SITE_URL}/matches`, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/cups`, changeFrequency: "daily", priority: 0.7 },
   ];
 
   // Only include pages backed by real data — a mock/simulated league or
@@ -16,7 +15,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // searchers to, since it wouldn't show real content.
   let leagueRoutes: MetadataRoute.Sitemap = [];
   let matchRoutes: MetadataRoute.Sitemap = [];
-  let cupRoutes: MetadataRoute.Sitemap = [];
 
   try {
     const leaguesData = await api.leagues({ liveOnly: true });
@@ -43,16 +41,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // same as above
   }
 
-  try {
-    const cups = await api.cups();
-    cupRoutes = cups.map((c) => ({
-      url: `${SITE_URL}/cups/${c.id}`,
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    }));
-  } catch {
-    // same as above
-  }
-
-  return [...staticRoutes, ...leagueRoutes, ...matchRoutes, ...cupRoutes];
+  return [...staticRoutes, ...leagueRoutes, ...matchRoutes];
 }

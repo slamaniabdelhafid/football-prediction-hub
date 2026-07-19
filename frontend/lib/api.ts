@@ -1,5 +1,5 @@
 import type {
-  Match, MatchDetail, StandingRow, League, LeaguesResponse, Cup, CupDetail,
+  Match, MatchDetail, StandingRow, League, LeaguesResponse,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -69,10 +69,6 @@ export const api = {
   search: (q: string, liveOnly = true) =>
     get<Match[]>(`/api/matches/search?q=${encodeURIComponent(q)}&live_only=${liveOnly}`, 0),
   matchDetail: (id: string) => get<MatchDetail>(`/api/matches/${id}`, 30),
-
-  // Cups
-  cups: () => get<Cup[]>("/api/cups", 300),
-  cupDetail: (id: string) => get<CupDetail>(`/api/cups/${id}`, 60),
 
   // Admin — every call needs the admin key (set once via the password
   // gate on /admin, stored in sessionStorage, passed in here explicitly

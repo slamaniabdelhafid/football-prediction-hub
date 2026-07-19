@@ -5,7 +5,6 @@ import Section from "@/components/Section";
 import MatchCard from "@/components/MatchCard";
 import MatchesTabs from "@/components/MatchesTabs";
 import LeagueCard from "@/components/LeagueCard";
-import CupCard from "@/components/cups/CupCard";
 
 async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
   try {
@@ -16,14 +15,13 @@ async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
 }
 
 export default async function HomePage() {
-  const [featured, today, tomorrow, yesterday, topPredictions, leaguesRes, cups] = await Promise.all([
+  const [featured, today, tomorrow, yesterday, topPredictions, leaguesRes] = await Promise.all([
     safe<Match[]>(api.featured(), []),
     safe<Match[]>(api.today(), []),
     safe<Match[]>(api.tomorrow(), []),
     safe<Match[]>(api.yesterday(), []),
     safe<Match[]>(api.topPredictions(85), []),
     safe(api.leagues({ popularOnly: true }), { total: 0, countries: [] }),
-    safe(api.cups(), []),
   ]);
 
   const popularLeagues: League[] = leaguesRes.countries.flatMap((c) => c.leagues);
@@ -41,16 +39,6 @@ export default async function HomePage() {
             <code>uvicorn main:app --reload</code> in <code>backend/</code>, then reload.
           </div>
         </div>
-      )}
-
-      {cups.length > 0 && (
-        <Section eyebrow="Happening now" title="Cup Competitions" viewAllHref="/cups">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {cups.map((c) => (
-              <CupCard key={c.id} cup={c} />
-            ))}
-          </div>
-        </Section>
       )}
 
       {featured.length > 0 && (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Match } from "@/lib/types";
+import { getLeagueColor } from "@/lib/leagueColors";
 import PredictionBar from "./PredictionBar";
 
 function formatKickoff(iso: string) {
@@ -9,6 +10,7 @@ function formatKickoff(iso: string) {
 
 export default function MatchCard({ match, featured = false }: { match: Match; featured?: boolean }) {
   const { status } = match;
+  const { accent } = getLeagueColor(match.league_id);
 
   return (
     <Link
@@ -16,9 +18,13 @@ export default function MatchCard({ match, featured = false }: { match: Match; f
       className={`block rounded-card border border-line bg-surface hover:bg-surface-2 hover:border-turf/50 transition-colors p-4 ${
         featured ? "sm:p-6" : ""
       }`}
+      style={{ borderTopWidth: 2, borderTopColor: `${accent}80` }}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] font-mono text-text-dim uppercase tracking-wide truncate">
+        <span
+          className="text-[11px] font-mono uppercase tracking-wide truncate font-semibold"
+          style={{ color: accent }}
+        >
           {match.league_id.replace(/-/g, " ")}
         </span>
         {status.kind === "live" ? (

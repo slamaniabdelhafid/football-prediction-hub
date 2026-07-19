@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { api } from "@/lib/api";
+import { getLeagueColor } from "@/lib/leagueColors";
 import PredictionBar from "@/components/PredictionBar";
 import AdditionalPredictions from "@/components/AdditionalPredictions";
 import TeamStatsPanel from "@/components/TeamStatsPanel";
@@ -75,7 +76,10 @@ export default async function MatchDetailPage({ params }: { params: { id: string
       />
       {/* Match header */}
       <div className="text-center mb-10">
-        <p className="text-[11px] font-mono text-turf uppercase tracking-widest mb-2">
+        <p
+          className="text-[11px] font-mono uppercase tracking-widest mb-2 font-semibold"
+          style={{ color: getLeagueColor(match.league_id).accent }}
+        >
           {match.league_id.replace(/-/g, " ")} · {formatKickoff(match.kickoff)}
         </p>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-8">

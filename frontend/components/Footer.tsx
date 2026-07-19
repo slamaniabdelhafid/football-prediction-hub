@@ -7,7 +7,7 @@ export default function Footer() {
             Football<span className="text-turf">Prediction</span>Hub
           </div>
           <p className="text-text-dim text-sm mt-1 max-w-md">
-            Fixtures, standings, stats, and prediction probabilities — not a betting site.
+            Fixtures, standings, stats, and prediction probabilities not a betting site.
           </p>
           <div className="flex gap-4 mt-3">
             <a href="/privacy" className="text-text-dim text-xs font-mono hover:text-text underline">
